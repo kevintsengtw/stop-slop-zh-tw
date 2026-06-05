@@ -19,7 +19,14 @@ metadata:
 
 2. **打破公式化結構。** 避免「不僅僅是X，更是Y」的對比句、排比堆疊、「首先…其次…最後…」的僵化骨架、為了氣勢而切的破碎短句。見 [references/structures.md](references/structures.md)。
 
-3. **校正成台灣用語。** 把中國用語換成台灣慣用語：視頻→影片、軟件→軟體、代碼→程式碼、對象→物件、接口→介面。技術名詞保留英文（Agent、MCP、Extension）。見 [references/terminology.md](references/terminology.md)。
+3. **校正成台灣用語。** 把中國用語換成台灣慣用語：視頻→影片、軟件→軟體、代碼→程式碼、對象→物件、接口→介面。技術名詞保留英文（Agent、MCP、Extension）。完整詞庫與同形詞判斷見 [references/terminology.md](references/terminology.md)。
+
+   **能執行 shell 時，優先用掃描器**（詞庫不進 context，只回報命中項）：
+   ```bash
+   node scripts/zh-tw-terms.mjs --json <檔案>   # 取得命中清單
+   node scripts/zh-tw-terms.mjs --fix <檔案>    # 自動套用 auto，flag 留待判斷
+   ```
+   `auto` 類直接套用；`flag` 類（同形詞，如 程序／對象／質量）依語境自己判斷。無法執行 shell（Claude Projects／API）時，改用 terminology.md 的「最高頻保底表」＋既有知識。
 
 4. **講具體的事。** 不要空泛的宣稱（「意義重大」「影響深遠」）。指名那個具體的東西。少用「賦能」「抓手」「閉環」「打法」這類互聯網黑話。
 

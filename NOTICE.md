@@ -17,6 +17,13 @@
 - 取用內容：中國用語 → 台灣用語的對照概念與高頻詞彙子集（見 references/terminology.md）。
 - 說明：terminology.md 為技術寫作場景的高頻子集，完整 3936 條規則請見來源專案。
 
+## 來源三：Chinese-Vocabulary-Radar（中國用語雷達）
+
+- 專案：https://github.com/aronhack/Chinese-Vocabulary-Radar
+- 授權：程式 MIT；資料（taiwan_china_vocabs.json）CC0 公眾領域
+- 取用內容：technical 與網路流行語的部分高頻詞，經人工精選、校正後併入 references/terminology.md。
+- 說明：CC0 法律上不要求姓名標示，此處列出僅為致謝與可追溯。併入時已剔除誤譯與非台灣慣用的條目。
+
 ## 本衍生作品授權
 
 因納入 CC BY-SA 4.0 的內容，整體 skill 依「相同方式分享（ShareAlike）」原則，以
