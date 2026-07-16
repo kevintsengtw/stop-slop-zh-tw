@@ -13,8 +13,11 @@
 // 規則：
 //   mode=auto  安全直換（視頻→影片）。--fix 會自動套用。
 //   mode=flag  同形詞／台灣也用的詞，只標記不自動換，交給判斷。
+//   match=substring|phrase|word|regex  控制字串、完整詞組、英數邊界或正規表示式比對。
 
 import { readFileSync, writeFileSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
+import { assertValidTerms } from './validate-terms.mjs';
 
 const TERMS_URL = new URL('../data/terms.json', import.meta.url);
 
@@ -42,18 +45,53 @@ function firstSuggestion(to) {
   return to.split(/[、，/]/)[0].trim();
 }
 
+const ASCII_WORD_CHAR = /[A-Za-z0-9_]/;
+
+function compileTerm(term) {
+  if ((term.match || 'substring') !== 'regex') return term;
+  const flags = [...new Set(`uy${term.flags || ''}`)].join('');
+  return { ...term, _regex: new RegExp(term.pattern, flags) };
+}
+
+function prepareTerms(terms, autoOnly = false) {
+  return terms
+    .filter((term) => !autoOnly || term.mode === 'auto')
+    .map(compileTerm)
+    .sort((a, b) => (b.priority || b.from.length) - (a.priority || a.from.length));
+}
+
+function matchAt(text, index, term) {
+  const match = term.match || 'substring';
+  if (match === 'regex') {
+    term._regex.lastIndex = index;
+    const result = term._regex.exec(text);
+    return result?.index === index && result[0].length ? result[0] : null;
+  }
+  if (!text.startsWith(term.from, index)) return null;
+  if (match === 'word') {
+    const before = index > 0 ? text[index - 1] : '';
+    const after = text[index + term.from.length] || '';
+    if (ASCII_WORD_CHAR.test(before) || ASCII_WORD_CHAR.test(after)) return null;
+  }
+  // phrase 是明確列入詞庫的多字詞；比對方式與 literal substring 相同，
+  // 差別在驗證器會拒絕單字 phrase，避免靠不可靠的中文單字邊界判斷。
+  return term.from;
+}
+
 // 非重疊、最長優先掃描：在每個位置取最長能對上的詞，命中後跳過該詞長度
-function scan(text, terms) {
-  const sorted = [...terms].sort((a, b) => b.from.length - a.from.length);
+export function scan(text, terms) {
+  const sorted = prepareTerms(terms);
   const hits = [];
   for (let i = 0; i < text.length; ) {
     let matched = null;
     for (const t of sorted) {
-      if (text.startsWith(t.from, i)) { matched = t; break; }
+      const value = matchAt(text, i, t);
+      if (value) { matched = { term: t, value }; break; }
     }
     if (matched) {
-      hits.push({ ...matched, index: i });
-      i += matched.from.length;
+      const { _regex, ...term } = matched.term;
+      hits.push({ ...term, matched: matched.value, index: i });
+      i += matched.value.length;
     } else {
       i += 1;
     }
@@ -72,17 +110,18 @@ function aggregate(hits) {
   return [...map.values()];
 }
 
-function applyFix(text, terms) {
-  const sorted = [...terms].sort((a, b) => b.from.length - a.from.length);
+export function applyFix(text, terms) {
+  const sorted = prepareTerms(terms, true);
   let out = '';
   for (let i = 0; i < text.length; ) {
     let matched = null;
     for (const t of sorted) {
-      if (t.mode === 'auto' && text.startsWith(t.from, i)) { matched = t; break; }
+      const value = matchAt(text, i, t);
+      if (value) { matched = { term: t, value }; break; }
     }
     if (matched) {
-      out += firstSuggestion(matched.to);
-      i += matched.from.length;
+      out += firstSuggestion(matched.term.to);
+      i += matched.value.length;
     } else {
       out += text[i];
       i += 1;
@@ -96,6 +135,7 @@ function main() {
   let terms;
   try {
     terms = JSON.parse(readFileSync(TERMS_URL, 'utf8'));
+    assertValidTerms(terms);
   } catch (e) {
     console.error(`無法讀取詞庫 ${TERMS_URL.pathname}：${e.message}`);
     process.exit(2);
@@ -159,4 +199,4 @@ function main() {
   console.log(`\n合計：auto ${auto.reduce((n, h) => n + h.count, 0)} 處、flag ${flag.reduce((n, h) => n + h.count, 0)} 處`);
 }
 
-main();
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

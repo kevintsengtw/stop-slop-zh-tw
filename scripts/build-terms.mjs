@@ -18,6 +18,9 @@
 //   taiwan.md(CC BY-SA)：資料綁在前端 JS，需另寫 parser，列為 TODO。
 
 import { readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { assertValidTerms } from './validate-terms.mjs';
 
 const TERMS_URL = new URL('../data/terms.json', import.meta.url);
 const DEFAULT_OUT = new URL('../data/terms.candidates.json', import.meta.url);
@@ -26,6 +29,8 @@ const ARONHACK_URL =
 
 // 已知錯譯／非台灣慣用，永不納入候選（額外保險，去重通常也會擋掉）
 const BLOCKLIST = new Set(['進程', '鼠標', '打印機', '適配器', '壁紙', '光標']);
+const SINGLE_HAN = /^\p{Script=Han}$/u;
+const ASCII_WORD = /^[A-Za-z0-9_-]+$/;
 
 function parseArgs(argv) {
   const opts = { src: null, out: null };
@@ -62,6 +67,7 @@ function main() {
   const opts = parseArgs(process.argv.slice(2));
 
   const existing = JSON.parse(readFileSync(TERMS_URL, 'utf8'));
+  assertValidTerms(existing, '既有詞庫');
   const existingFrom = new Set(existing.map((t) => t.from));
 
   loadSource(opts.src)
@@ -73,16 +79,19 @@ function main() {
       let skippedExisting = 0;
       let skippedBlocked = 0;
       let skippedDup = 0;
+      let skippedUnsafe = 0;
 
       for (const c of normalized) {
         if (existingFrom.has(c.from)) { skippedExisting++; continue; }
         if (BLOCKLIST.has(c.from)) { skippedBlocked++; continue; }
         if (seen.has(c.from)) { skippedDup++; continue; }
+        if (SINGLE_HAN.test(c.from)) { skippedUnsafe++; continue; }
         seen.add(c.from);
         candidates.push({
           from: c.from,
           to: c.to,
           mode: 'flag',
+          ...(ASCII_WORD.test(c.from) ? { match: 'word' } : {}),
           source: 'aronhack(CC0)',
           note: '需人工審：確認譯法、決定 auto/flag、剔除生活詞',
           ...(c.en ? { en: c.en } : {}),
@@ -90,14 +99,15 @@ function main() {
       }
 
       candidates.sort((a, b) => a.from.localeCompare(b.from, 'zh-Hant'));
+      assertValidTerms(candidates, '候選詞庫');
 
-      const outUrl = opts.out ? new URL(`file://${opts.out}`) : DEFAULT_OUT;
+      const outUrl = opts.out ? pathToFileURL(resolve(opts.out)) : DEFAULT_OUT;
       writeFileSync(outUrl, JSON.stringify(candidates, null, 2) + '\n', 'utf8');
 
       console.log(`來源條目：${rows.length}`);
       console.log(`既有詞庫：${existing.length}`);
       console.log(`新候選　：${candidates.length}（→ ${opts.out || DEFAULT_OUT.pathname}）`);
-      console.log(`已跳過　：既有 ${skippedExisting}、封鎖 ${skippedBlocked}、重複 ${skippedDup}`);
+      console.log(`已跳過　：既有 ${skippedExisting}、封鎖 ${skippedBlocked}、重複 ${skippedDup}、單字 ${skippedUnsafe}`);
       console.log('\n下一步：人工檢視候選檔，修正譯法、把安全的改成 mode=auto、剔除無關生活詞，再併入 terms.json。');
     })
     .catch((e) => {

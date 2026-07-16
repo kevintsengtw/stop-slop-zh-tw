@@ -27,7 +27,10 @@ stop-slop-zh-tw/
 │   └── terms.json           # 完整用語詞庫（機器讀，不進 context）
 ├── scripts/
 │   ├── zh-tw-terms.mjs      # 台灣用語掃描器（Node，零依賴）
+│   ├── validate-terms.mjs   # 詞庫結構與比對安全性驗證
 │   └── build-terms.mjs      # 從授權相容來源產生候選詞（供人工審）
+├── tests/
+│   └── zh-tw-terms.test.mjs # 掃描器與詞庫回歸測試
 ├── README.md
 └── NOTICE.md                # 授權與出處
 ```
@@ -153,6 +156,15 @@ New-Item -ItemType Junction `
 - **判斷層**（去 AI 味、去翻譯腔）靠 LLM，留在 phrases.md／structures.md，無法也不該 script 化。
 - **查表層**（正台灣用語）的完整詞庫放 [data/terms.json](data/terms.json)，由掃描器 [scripts/zh-tw-terms.mjs](scripts/zh-tw-terms.mjs) 讀取——**詞庫不進 context，只回報實際命中的詞**，所以詞庫再大也不膨脹。
 - [references/terminology.md](references/terminology.md) 只留同形詞判斷、最高頻保底表（給不能執行 script 的 Projects／API 環境）與掃描器用法。
+
+詞庫可用 `match` 指定比對策略：中文多字詞預設為 `substring`，明確技術詞組可用 `phrase`，英數詞使用 `word` 避免 `emo` 命中 `emoji`，少數複雜規則才使用 `regex`。單一中文字不能直接做全域子字串掃描；應改收完整詞組。
+
+```bash
+node scripts/validate-terms.mjs data/terms.json
+node --test tests/zh-tw-terms.test.mjs
+```
+
+驗證器會拒絕重複 `from`、不合法的 mode、沒有邊界策略的英數詞、單字級中文字，以及含多個替代選項的 `auto` 詞條。
 
 詞庫可從下列來源擴充（已標授權與可用性）：
 

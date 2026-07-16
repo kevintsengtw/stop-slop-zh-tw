@@ -18,6 +18,22 @@ echo "一段文字" | node scripts/zh-tw-terms.mjs -   # 從 stdin 讀
 - **auto**：安全直換（視頻→影片），`--fix` 會自動套用。
 - **flag**：同形詞或台灣也通用的詞，只標記、不自動換，由你依語境判斷。
 
+詞條可用 `match` 控制比對方式：
+
+| match | 用途 |
+| ---- | ---- |
+| substring | 預設；一般兩字以上中文詞 |
+| phrase | 明確列入詞庫的完整技術詞組 |
+| word | 英數詞；前後不能連著英數字或底線 |
+| regex | 少數需要上下文的規則，必須提供 `pattern` |
+
+不要收錄「庫、類、宏、棧、堆」這類單一中文字做全域掃描。改收「第三方庫、類方法、宏定義、調用棧」等能判斷語境的完整詞組。修改詞庫後執行：
+
+```bash
+node scripts/validate-terms.mjs data/terms.json
+node --test tests/zh-tw-terms.test.mjs
+```
+
 無法執行 shell（Claude Projects／API）時，改用下方「最高頻保底表」＋你的既有知識。
 
 ## 同形詞與判斷題（換之前先看語境）
