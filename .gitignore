@@ -1,2 +1,4 @@
 # build-terms.mjs 產生的審查中間產物（重新跑就會再生，不進版控）
 data/terms.candidates.json
+node_modules/
+npm-debug.log*

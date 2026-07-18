@@ -1,0 +1,18 @@
+{
+  "name": "stop-slop-zh-tw",
+  "version": "0.2.0",
+  "private": true,
+  "description": "正體中文去除 AI 寫作模式、台灣用語校正與排版工具",
+  "type": "module",
+  "license": "CC-BY-SA-4.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test",
+    "validate:skill": "node scripts/validate-skill.mjs",
+    "validate:terms": "node scripts/validate-terms.mjs data/terms.json",
+    "validate:eval": "node evals/fresh-longform-application/verify.mjs",
+    "validate": "npm run test && npm run validate:skill && npm run validate:terms && npm run validate:eval"
+  }
+}

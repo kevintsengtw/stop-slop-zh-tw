@@ -1,0 +1,4 @@
+interface:
+  display_name: "Stop Slop（台灣正體中文）"
+  short_description: "清除正體中文 AI 腔與翻譯腔，校正台灣用語及排版"
+  default_prompt: "使用 $stop-slop-zh-tw 審閱這篇文章，保留原意並校正台灣用語與排版。"

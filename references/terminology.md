@@ -11,12 +11,15 @@
 ```bash
 node scripts/zh-tw-terms.mjs <檔案>         # 報告命中
 node scripts/zh-tw-terms.mjs --json <檔案>  # 機器可讀，給 Agent 解析
+node scripts/zh-tw-terms.mjs --dry-run <檔案> # 預覽 auto 校正，不寫入
 node scripts/zh-tw-terms.mjs --fix <檔案>   # 自動套用 auto，flag 留待判斷
 echo "一段文字" | node scripts/zh-tw-terms.mjs -   # 從 stdin 讀
 ```
 
 - **auto**：安全直換（視頻→影片），`--fix` 會自動套用。
 - **flag**：同形詞或台灣也通用的詞，只標記、不自動換，由你依語境判斷。
+
+掃描器會保護 Markdown 程式碼、行內程式碼、URL、連結目標、HTML 標籤、Email 與常見路徑。`--json` 另提供每次命中的規則 ID、行號、欄位和原文片段；`--fix` 使用安全寫回，執行前先用 `--dry-run` 檢查差異。
 
 詞條可用 `match` 控制比對方式：
 
@@ -101,3 +104,4 @@ node --test tests/zh-tw-terms.test.mjs
 - **同形詞不要過度校正。** 見上方判斷題表；掃描器已用 `flag` 標出，別把台灣本就通用的詞當支語。
 - **語感層面也要看。** 用語對了，但句法是大陸書面腔（「對…進行賦能」），仍需依 phrases.md／structures.md 處理。
 - **詞庫擴充。** terms.json 可從授權相容的來源（CC0／Apache／CC BY-SA）擴充，見 README「用語對照的範圍與延伸資源」。只併授權相容者。
+- **保留來源。** 正式詞條必須有 `source`，其定義見 `data/term-sources.json`；容易誤判的詞另以 `note` 記錄適用邊界。早期組合詞庫使用 `legacy-curated-composite`，不要假裝能回推更精確的逐筆上游。

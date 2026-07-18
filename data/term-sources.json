@@ -1,0 +1,34 @@
+{
+  "legacy-curated-composite": {
+    "label": "專案早期人工精選組合詞庫",
+    "sources": [
+      {
+        "name": "taiwan.md",
+        "url": "https://github.com/frank890417/taiwan-md",
+        "license": "CC BY-SA 4.0"
+      },
+      {
+        "name": "Chinese-Vocabulary-Radar",
+        "url": "https://github.com/aronhack/Chinese-Vocabulary-Radar",
+        "license": "CC0（資料）"
+      },
+      {
+        "name": "stop-slop-zh-tw 人工審訂",
+        "url": null,
+        "license": "CC BY-SA 4.0"
+      }
+    ],
+    "note": "這批詞條建立時尚未保存逐筆來源，因此只能標記為組合來源，不推測單一詞條的精確上游。"
+  },
+  "aronhack(CC0)": {
+    "label": "Chinese-Vocabulary-Radar 候選詞",
+    "sources": [
+      {
+        "name": "Chinese-Vocabulary-Radar",
+        "url": "https://github.com/aronhack/Chinese-Vocabulary-Radar",
+        "license": "CC0（資料）"
+      }
+    ],
+    "note": "由 build-terms.mjs 產生；仍須人工確認譯法、模式與適用邊界後才可併入正式詞庫。"
+  }
+}

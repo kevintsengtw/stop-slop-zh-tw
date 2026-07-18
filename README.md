@@ -1,12 +1,15 @@
 # Stop Slop（台灣正體中文版）
 
+[![CI](https://github.com/kevintsengtw/stop-slop-zh-tw/actions/workflows/ci.yml/badge.svg)](https://github.com/kevintsengtw/stop-slop-zh-tw/actions/workflows/ci.yml)
+[![License: CC BY-SA 4.0](https://img.shields.io/badge/License-CC_BY--SA_4.0-lightgrey.svg)](LICENSE)
+
 移除正體中文（台灣）文章裡的 AI 味，並把中國用語校正成台灣慣用語。
 
-這是 [hardikpandya/stop-slop](https://github.com/hardikpandya/stop-slop) 的台灣正體中文改寫版，結合 [taiwan.md](https://taiwan.md) 的用語對照資料。重點不是把英文規則直譯，而是針對中文語料訓練出來的真實 AI tell，加上台灣用語層。
+本專案以 [hardikpandya/stop-slop](https://github.com/hardikpandya/stop-slop) 的方法論為基礎，參考 [Humanizer-zh-TW](https://github.com/kevintsai1202/Humanizer-zh-TW) 的正體中文 AI 模式與人味概念，並結合 [taiwan.md](https://taiwan.md) 的用語對照資料。重點不是照抄或直譯，而是針對中文語料中的寫作模式重新實作，再加入台灣用語、保真流程與確定性排版工具。
 
 ## 為什麼是「結合」而不是「翻譯」
 
-英文 stop-slop 抓的是 "Here's the thing"、"not just X but Y"、em dash 濫用這類英文模式，直譯到中文沒有用。中文 AI 有自己的 tell：「不僅僅是X，更是Y」「值得注意的是」「賦能／抓手／閉環」、四字成語排比、「首先…其次…最後」骨架。
+英文 stop-slop 抓的是 "Here's the thing"、"not just X but Y"、em dash 濫用這類英文模式，直譯到中文沒有用。中文 AI 有自己的 tell：「不僅僅是 X，更是 Y」「值得注意的是」「賦能／抓手／閉環」、四字成語排比、「首先…其次…最後」骨架。
 
 還有一層是**歐化語法／翻譯腔**——句法結構本身像翻譯，即使一個塑膠句都沒有。「透過…我們可以」「對於…來說」「使得」「…之一」「們」濫用，這些是中文 AI 最深的水印。一篇文章可以零塑膠卻整篇歐化。
 
@@ -22,18 +25,36 @@ stop-slop-zh-tw/
 │   ├── structures.md        # 中文結構性陳腔濫調 + 歐化語法／翻譯腔
 │   ├── terminology.md       # 同形詞判斷 + 最高頻保底表 + 掃描器用法
 │   ├── editing-workflow.md  # 審閱模式、長文防縮水、保真與人味邊界
+│   ├── typography.md        # 中文全形標點、英文半形標點與中英空格
 │   └── examples.md          # before/after 改寫範例
 ├── data/
-│   └── terms.json           # 完整用語詞庫（機器讀，不進 context）
+│   ├── terms.json           # 完整用語詞庫（機器讀，不進 context）
+│   └── term-sources.json    # 詞條來源 ID、授權與追蹤限制
 ├── scripts/
 │   ├── zh-tw-terms.mjs      # 台灣用語掃描器（Node，零依賴）
+│   ├── zh-tw-typography.mjs # 台灣中文排版檢查與安全修正
+│   ├── text-regions.mjs     # Markdown／URL／程式碼共用保護區
+│   ├── file-utils.mjs       # 原子寫回工具
 │   ├── validate-terms.mjs   # 詞庫結構與比對安全性驗證
 │   └── build-terms.mjs      # 從授權相容來源產生候選詞（供人工審）
 ├── tests/
-│   └── zh-tw-terms.test.mjs # 掃描器與詞庫回歸測試
+│   ├── zh-tw-terms.test.mjs # 掃描器與詞庫回歸測試
+│   ├── text-regions.test.mjs
+│   └── zh-tw-typography.test.mjs
+├── agents/openai.yaml       # Codex skill 介面資訊
+├── evals/                   # 長文端對端驗證與可重現腳本
+├── LICENSES/                # 第三方 MIT 授權文字
+├── package.json             # 公開驗證命令與 Node.js 需求
 ├── README.md
 └── NOTICE.md                # 授權與出處
 ```
+
+## 執行需求
+
+- Node.js 18 以上；CI 會測試 Node.js 18、20、22。
+- 執行期不需要第三方 npm 套件，也不需要先跑 `npm install`。
+- 支援 Windows、macOS 與 Linux；文字檔統一使用 UTF-8 和 LF。
+- `package.json` 只提供驗證命令，本專案不發布成 npm package。
 
 ## 安裝
 
@@ -62,7 +83,11 @@ New-Item -ItemType Junction `
 
 **Claude Projects：** 把 `SKILL.md` 與 references 上傳到專案知識。
 
+**Codex：** 把整個資料夾放進 `$CODEX_HOME/skills/stop-slop-zh-tw`；未設定 `CODEX_HOME` 時，使用 `~/.codex/skills/stop-slop-zh-tw`。
+
 **API / 系統提示：** 把 `SKILL.md` 放進 system prompt，references 按需載入。
+
+若只建立最小執行安裝，保留 `SKILL.md`、`agents/`、`references/`、`data/`、`scripts/` 即可。重新散布時仍須一併保留 `LICENSE`、`LICENSES/` 與 `NOTICE.md`；`tests/`、`evals/` 和 `plans/` 是維護與驗證資料，不是 skill 執行期依賴。
 
 ## 使用方式
 
@@ -74,17 +99,18 @@ New-Item -ItemType Junction `
 | 審閱整篇草稿 | 「這篇有沒有 AI 味？照 stop-slop-zh-tw 抓一遍」 |
 | 只找問題、不改稿 | 「只標出有 AI 味的地方，先不要改」 |
 | 只校正台灣用語 | 「幫我把這段的中國用語校正成台灣用語」 |
+| 只檢查排版 | 「檢查中文標點和中英文空格，不要改內容」 |
 | 要分數 | 「依 stop-slop-zh-tw 的六維評分，並指出最該改的三處」 |
 
 **它會做三層處理：**
 
-1. **除 AI 味** — 砍開場清喉嚨、贅詞、公式化結構（「不僅僅是X，更是Y」「首先…其次…」）。
+1. **除 AI 味** — 砍開場清喉嚨、贅詞、公式化結構（「不僅僅是 X，更是 Y」「首先…其次…」）。
 2. **去翻譯腔** — 抓歐化／西化語法（「透過…我們可以」「對於…來說」「使得」「們」濫用）。
 3. **正台灣用語** — 中國用語換台灣慣用語（視頻→影片、代碼→程式碼），技術名詞保留英文。
 
 改寫前會先確認任務模式。只想找問題時，輸出位置、問題、理由與處理方向，不附改寫版；要求改寫時，長文預設保留段落規模和所有資訊點。交稿前會回頭核對數字、專名、引言、因果與作者立場，也不會替作者編造第一人稱經歷或資料。完整規則見 [references/editing-workflow.md](references/editing-workflow.md)。
 
-接著會依**直接／節奏／信任／真實／密度／台灣味**六個維度各評 1–10，低於 42/60 建議重寫。
+需要評分時，會依**直接／節奏／信任／真實／密度／台灣味**六個維度各評 1–10。分數只用來指出檢查方向，不作為自動重寫或刪減內容的門檻。
 
 **一個完整例子：**
 
@@ -133,7 +159,7 @@ New-Item -ItemType Junction `
 | 密度 | 7 | 四段砍成四段但每句有料 |
 | 台灣味 | 9 | 無中國用語殘留，用「你」 |
 
-合計 47/60，過 42 門檻。
+合計 47/60；優先檢查「信任」與「密度」兩個較低的面向。
 
 一個取捨先講：「對象」是 flag 詞（object→物件，但 target／測試對象要看語境），不會無腦校正。原文「測試對象設計」語意其實有點含糊——指 test double（測試替身）還是受測系統？從「設計得好能提升效能與相容性」判斷指的是受測系統，故改成「受測對象（SUT，System Under Test）」而非「測試物件」。若原意是 mock／stub 那類測試替身，再調整即可。
 
@@ -160,11 +186,24 @@ New-Item -ItemType Junction `
 詞庫可用 `match` 指定比對策略：中文多字詞預設為 `substring`，明確技術詞組可用 `phrase`，英數詞使用 `word` 避免 `emo` 命中 `emoji`，少數複雜規則才使用 `regex`。單一中文字不能直接做全域子字串掃描；應改收完整詞組。
 
 ```bash
-node scripts/validate-terms.mjs data/terms.json
-node --test tests/zh-tw-terms.test.mjs
+npm run validate
 ```
 
-驗證器會拒絕重複 `from`、不合法的 mode、沒有邊界策略的英數詞、單字級中文字，以及含多個替代選項的 `auto` 詞條。
+這會執行 28 項 Node.js 測試、skill 結構檢查、209 筆正式詞條驗證及第二次長文端對端驗證。GitHub Actions 會在 Node.js 18、20、22 重複執行相同命令。
+
+詞條驗證器會拒絕重複 `from`、不合法的 mode、沒有邊界策略的英數詞、單字級中文字，以及含多個替代選項的 `auto` 詞條。
+正式詞條另須提供 `source`；來源 ID 與授權說明記錄在 [data/term-sources.json](data/term-sources.json)。
+
+排版工具會先保護 Markdown 程式碼、URL、連結目標、HTML 標籤、Email、路徑與數字型技術 token，再處理三項硬性規則：中文句子使用全形標點、英文句子保留半形標點、中英文之間使用一個半形空白。
+
+```bash
+node scripts/zh-tw-typography.mjs --check <檔案>
+node scripts/zh-tw-typography.mjs --json <檔案>
+node scripts/zh-tw-typography.mjs --dry-run <檔案>
+node scripts/zh-tw-typography.mjs --fix <檔案>
+```
+
+`--check`、`--json` 與 `--dry-run` 都不寫入；確認差異後才使用 `--fix`。
 
 詞庫可從下列來源擴充（已標授權與可用性）：
 
@@ -181,9 +220,17 @@ node --test tests/zh-tw-terms.test.mjs
 
 **更新詞庫（維護者）：** 跑 `node scripts/build-terms.mjs` 會從 aronhack（CC0）抓資料，去重、過濾後把**新候選詞**寫到 `data/terms.candidates.json`（不覆蓋 `terms.json`）。**候選一律需人工審**——確認譯法、決定 `auto`／`flag`、剔除無關生活詞，再手動併入 `terms.json`。這道人工關卡是刻意的：來源資料含錯譯（如 進程→程序、鼠標→游標），自動併入會把錯誤帶進來。
 
+## 驗證範圍與限制
+
+目前有兩組合成長文案例。第二組會自動比對篇幅、章節、內容區塊、92 個數字 token、24 種技術保護字串、用語、排版與冪等性；完整報告見 [evals/fresh-longform-application/comparison.md](evals/fresh-longform-application/comparison.md)。
+
+合成案例適合回歸測試，但不能取代真實文章與獨立人工審閱。因此目前適合視為公開 beta；在加入取得授權的真實語料、不同文體與外部盲測前，不宣稱已涵蓋所有中文寫作情境。
+
 ## 出處
 
 - 方法論與結構：[hardikpandya/stop-slop](https://github.com/hardikpandya/stop-slop)（MIT）
+- 正體中文 AI 模式與人味概念：[kevintsai1202/Humanizer-zh-TW](https://github.com/kevintsai1202/Humanizer-zh-TW)（MIT）
 - 台灣用語：[frank890417/taiwan-md](https://github.com/frank890417/taiwan-md) / [taiwan.md](https://taiwan.md)（CC BY-SA 4.0）
+- 詞彙資料：[aronhack/Chinese-Vocabulary-Radar](https://github.com/aronhack/Chinese-Vocabulary-Radar)（資料 CC0）
 
-見 [NOTICE.md](NOTICE.md)。
+完整第三方授權、取用範圍與修改說明見 [NOTICE.md](NOTICE.md) 及 [LICENSES/](LICENSES/)。本專案整體發行包依 [CC BY-SA 4.0](LICENSE) 釋出。

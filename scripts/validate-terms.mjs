@@ -16,7 +16,8 @@ function compileRegex(term) {
   return new RegExp(term.pattern, flags);
 }
 
-export function validateTerms(terms) {
+export function validateTerms(terms, options = {}) {
+  const { requireSource = false } = options;
   const errors = [];
   if (!Array.isArray(terms)) return ['詞庫根節點必須是陣列'];
 
@@ -31,6 +32,11 @@ export function validateTerms(terms) {
     if (typeof term.from !== 'string' || !term.from.trim()) errors.push(`${at}：缺少 from`);
     if (typeof term.to !== 'string' || !term.to.trim()) errors.push(`${at}：缺少 to`);
     if (!MODES.has(term.mode)) errors.push(`${at} ${term.from || '(unknown)'}：mode 必須是 auto 或 flag`);
+    if (requireSource && (typeof term.source !== 'string' || !term.source.trim())) {
+      errors.push(`${at} ${term.from || '(unknown)'}：正式詞條必須提供 source`);
+    } else if (term.source !== undefined && (typeof term.source !== 'string' || !term.source.trim())) {
+      errors.push(`${at} ${term.from || '(unknown)'}：source 必須是非空字串`);
+    }
 
     if (typeof term.from !== 'string' || !term.from) return;
     const previous = seen.get(term.from);
@@ -77,8 +83,8 @@ export function validateTerms(terms) {
   return errors;
 }
 
-export function assertValidTerms(terms, label = '詞庫') {
-  const errors = validateTerms(terms);
+export function assertValidTerms(terms, label = '詞庫', options = { requireSource: true }) {
+  const errors = validateTerms(terms, options);
   if (errors.length) throw new Error(`${label}驗證失敗：\n- ${errors.join('\n- ')}`);
 }
 
@@ -93,7 +99,7 @@ function main() {
     process.exit(1);
   }
 
-  const errors = validateTerms(terms);
+  const errors = validateTerms(terms, { requireSource: true });
   if (errors.length) {
     console.error(`詞庫驗證失敗（${errors.length} 項）：`);
     for (const error of errors) console.error(`- ${error}`);

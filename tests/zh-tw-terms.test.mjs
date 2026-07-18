@@ -49,6 +49,23 @@ test('最長詞優先，數據庫不會拆成數據', () => {
   assert.equal(applyFix('數據庫', terms), '資料庫');
 });
 
+test('保護程式碼與 URL，但仍掃描 Markdown 連結顯示文字', () => {
+  const customTerms = [{ from: '視頻', to: '影片', mode: 'auto' }];
+  const input = '視頻 `視頻` https://example.com/視頻 [視頻](https://example.com/視頻)';
+  const hits = scan(input, customTerms);
+  assert.equal(hits.length, 2);
+  assert.equal(applyFix(input, customTerms), '影片 `視頻` https://example.com/視頻 [影片](https://example.com/視頻)');
+});
+
+test('逐筆命中包含規則 ID、位置、片段與保護狀態', () => {
+  const customTerms = [{ from: '視頻', to: '影片', mode: 'auto' }];
+  const hit = scan('第一行\n這是視頻。', customTerms)[0];
+  assert.equal(hit.ruleId, 'term:視頻');
+  assert.deepEqual({ line: hit.line, column: hit.column }, { line: 2, column: 3 });
+  assert.equal(hit.excerpt.includes('這是視頻'), true);
+  assert.equal(hit.protected, false);
+});
+
 test('--fix 邏輯不會替多候選 flag 任選第一個答案', () => {
   assert.equal(applyFix('模板、創建、數據庫', terms), '模板、創建、資料庫');
 });
@@ -83,6 +100,13 @@ test('驗證器拒絕危險詞條', () => {
   assert.match(errors, /auto 只能有一個替代詞/);
   assert.match(errors, /mode 必須是 auto 或 flag/);
   assert.match(errors, /from 與第 4 筆重複/);
+});
+
+test('正式詞條驗證要求來源，臨時測試詞條可省略', () => {
+  const term = [{ from: '視頻', to: '影片', mode: 'auto' }];
+  assert.deepEqual(validateTerms(term), []);
+  assert.match(validateTerms(term, { requireSource: true }).join('\n'), /必須提供 source/);
+  assert.deepEqual(validateTerms([{ ...term[0], source: 'manual-review' }], { requireSource: true }), []);
 });
 
 test('候選詞建置會跳過單字並替英數詞加上 word 邊界', () => {

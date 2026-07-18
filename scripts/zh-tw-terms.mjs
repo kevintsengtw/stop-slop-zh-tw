@@ -15,16 +15,20 @@
 //   mode=flag  同形詞／台灣也用的詞，只標記不自動換，交給判斷。
 //   match=substring|phrase|word|regex  控制字串、完整詞組、英數邊界或正規表示式比對。
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { atomicWriteFile } from './file-utils.mjs';
+import { findProtectedRegions, getExcerpt, getLocation, protectedRegionAt } from './text-regions.mjs';
 import { assertValidTerms } from './validate-terms.mjs';
 
 const TERMS_URL = new URL('../data/terms.json', import.meta.url);
 
 function parseArgs(argv) {
-  const opts = { fix: false, json: false, file: null, stdin: false };
+  const opts = { fix: false, dryRun: false, json: false, file: null, stdin: false };
   for (const a of argv) {
     if (a === '--fix') opts.fix = true;
+    else if (a === '--dry-run') opts.dryRun = true;
     else if (a === '--json') opts.json = true;
     else if (a === '-') opts.stdin = true;
     else if (!a.startsWith('--')) opts.file = a;
@@ -81,16 +85,33 @@ function matchAt(text, index, term) {
 // 非重疊、最長優先掃描：在每個位置取最長能對上的詞，命中後跳過該詞長度
 export function scan(text, terms) {
   const sorted = prepareTerms(terms);
+  const protectedRegions = findProtectedRegions(text, { protectNumeric: false });
   const hits = [];
   for (let i = 0; i < text.length; ) {
+    const protectedRegion = protectedRegionAt(protectedRegions, i);
+    if (protectedRegion) {
+      i = protectedRegion.end;
+      continue;
+    }
     let matched = null;
     for (const t of sorted) {
       const value = matchAt(text, i, t);
-      if (value) { matched = { term: t, value }; break; }
+      const crossesProtectedRegion = value && protectedRegions.some(
+        (region) => i < region.end && i + value.length > region.start,
+      );
+      if (value && !crossesProtectedRegion) { matched = { term: t, value }; break; }
     }
     if (matched) {
       const { _regex, ...term } = matched.term;
-      hits.push({ ...term, matched: matched.value, index: i });
+      hits.push({
+        ...term,
+        ruleId: `term:${term.from}`,
+        matched: matched.value,
+        index: i,
+        ...getLocation(text, i),
+        excerpt: getExcerpt(text, i, matched.value.length),
+        protected: false,
+      });
       i += matched.value.length;
     } else {
       i += 1;
@@ -112,12 +133,22 @@ function aggregate(hits) {
 
 export function applyFix(text, terms) {
   const sorted = prepareTerms(terms, true);
+  const protectedRegions = findProtectedRegions(text, { protectNumeric: false });
   let out = '';
   for (let i = 0; i < text.length; ) {
+    const protectedRegion = protectedRegionAt(protectedRegions, i);
+    if (protectedRegion) {
+      out += text.slice(i, protectedRegion.end);
+      i = protectedRegion.end;
+      continue;
+    }
     let matched = null;
     for (const t of sorted) {
       const value = matchAt(text, i, t);
-      if (value) { matched = { term: t, value }; break; }
+      const crossesProtectedRegion = value && protectedRegions.some(
+        (region) => i < region.end && i + value.length > region.start,
+      );
+      if (value && !crossesProtectedRegion) { matched = { term: t, value }; break; }
     }
     if (matched) {
       out += firstSuggestion(matched.term.to);
@@ -132,6 +163,10 @@ export function applyFix(text, terms) {
 
 function main() {
   const opts = parseArgs(process.argv.slice(2));
+  if (opts.fix && opts.dryRun) {
+    console.error('--fix 與 --dry-run 不能同時使用');
+    process.exit(2);
+  }
   let terms;
   try {
     terms = JSON.parse(readFileSync(TERMS_URL, 'utf8'));
@@ -152,7 +187,7 @@ function main() {
       process.exit(2);
     }
   } else {
-    console.error('用法：node scripts/zh-tw-terms.mjs [--json|--fix] <檔案>｜-（stdin）');
+    console.error('用法：node scripts/zh-tw-terms.mjs [--json|--dry-run|--fix] <檔案>｜-（stdin）');
     process.exit(2);
   }
 
@@ -161,14 +196,29 @@ function main() {
   const auto = agg.filter((h) => h.mode === 'auto').sort((a, b) => b.count - a.count);
   const flag = agg.filter((h) => h.mode === 'flag').sort((a, b) => b.count - a.count);
 
-  if (opts.fix) {
-    if (!opts.file) {
+  if (opts.fix || opts.dryRun) {
+    if (opts.fix && !opts.file) {
       console.error('--fix 需要檔案路徑（不支援 stdin 就地修改）');
       process.exit(2);
     }
     const fixed = applyFix(text, terms);
-    writeFileSync(opts.file, fixed, 'utf8');
-    console.log(`已套用 ${auto.reduce((n, h) => n + h.count, 0)} 處 auto 校正 → ${opts.file}`);
+    const autoHits = hits.filter((hit) => hit.mode === 'auto');
+    if (opts.dryRun) {
+      const target = opts.file || '(stdin)';
+      console.log(`台灣用語校正預覽：${target}`);
+      for (const hit of autoHits) {
+        console.log(`${target}:${hit.line}:${hit.column} [${hit.ruleId}] ${hit.matched} → ${firstSuggestion(hit.to)}`);
+      }
+      console.log(`合計：${autoHits.length} 處（未寫入）`);
+      return;
+    }
+    try {
+      atomicWriteFile(resolve(opts.file), fixed);
+    } catch (error) {
+      console.error(`寫回失敗，原始檔案未變更：${error.message}`);
+      process.exit(2);
+    }
+    console.log(`已安全寫回 ${auto.reduce((n, h) => n + h.count, 0)} 處 auto 校正 → ${opts.file}`);
     if (flag.length) {
       console.log('\n以下為同形詞／需人工判斷（未自動更動）：');
       for (const h of flag) console.log(`  ⚠ ${h.from}→${h.to}  ×${h.count}${h.note ? `  （${h.note}）` : ''}`);
@@ -177,7 +227,7 @@ function main() {
   }
 
   if (opts.json) {
-    console.log(JSON.stringify({ file: opts.file || '(stdin)', auto, flag }, null, 2));
+    console.log(JSON.stringify({ file: opts.file || '(stdin)', auto, flag, hits }, null, 2));
     return;
   }
 
