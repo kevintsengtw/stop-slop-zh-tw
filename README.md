@@ -58,7 +58,9 @@ stop-slop-zh-tw/
 
 ## 安裝
 
-**專案層級（單一 repo 使用）：** 把整個資料夾放進專案的 `.claude/skills/`，Claude Code 會自動載入，不必額外設定。
+skill 的安裝位置有兩種慣例：`.agents/skills/` 是跨工具通用路徑，Codex 直接掃描；`.claude/skills/` 是 Claude Code 專屬路徑。Claude Code 目前只讀後者，所以想讓一份檔案兩邊共用，就把資料夾放在 `.agents/skills/`，再從 `.claude/skills/` 建連結指過去。
+
+**只用 Claude Code：** 把整個資料夾放進專案的 `.claude/skills/`，Claude Code 會自動載入，不必額外設定。
 
 ```text
 你的專案/
@@ -67,7 +69,33 @@ stop-slop-zh-tw/
         └── stop-slop-zh-tw/   ← 放這裡即可
 ```
 
-**全域使用（所有專案共用）：** 把資料夾放進 `~/.claude/skills/`，或建連結指向現有位置。
+**跨工具共用（Claude Code、Codex 與其他支援 Agent Skills 的工具）：** 資料夾放 `.agents/skills/`，再讓 `.claude/skills/` 連過去。
+
+```text
+你的專案/
+├── .agents/
+│   └── skills/
+│       └── stop-slop-zh-tw/   ← 資料夾放這裡
+└── .claude/
+    └── skills/
+        └── stop-slop-zh-tw    ← 連結指向上面
+```
+
+```bash
+# macOS / Linux
+mkdir -p .claude/skills
+ln -s ../../.agents/skills/stop-slop-zh-tw .claude/skills/stop-slop-zh-tw
+```
+
+```powershell
+# Windows（建 junction 指向實際位置）
+New-Item -ItemType Directory -Force -Path ".claude\skills" | Out-Null
+New-Item -ItemType Junction `
+  -Path "$PWD\.claude\skills\stop-slop-zh-tw" `
+  -Target "$PWD\.agents\skills\stop-slop-zh-tw"
+```
+
+**全域使用（所有專案共用）：** Claude Code 讀 `~/.claude/skills/`，Codex 與其他工具讀 `~/.agents/skills/`；也可以只放一份，另一邊建連結指向它。
 
 ```bash
 # macOS / Linux
@@ -78,12 +106,12 @@ ln -s "$(pwd)/stop-slop-zh-tw" ~/.claude/skills/stop-slop-zh-tw
 # Windows（建 junction 指向實際位置）
 New-Item -ItemType Junction `
   -Path "$env:USERPROFILE\.claude\skills\stop-slop-zh-tw" `
-  -Target "D:\path\to\your-project\.claude\skills\stop-slop-zh-tw"
+  -Target "D:\path\to\your-project\.agents\skills\stop-slop-zh-tw"
 ```
 
-**Claude Projects：** 把 `SKILL.md` 與 references 上傳到專案知識。
+**Codex：** 掃描順序是 `$CWD/.agents/skills`、沿路往上到 `$REPO_ROOT/.agents/skills`、`$HOME/.agents/skills`、`/etc/codex/skills`，最後是內建 skill。放進其中一層即可，不需要設定 `CODEX_HOME`。
 
-**Codex：** 把整個資料夾放進 `$CODEX_HOME/skills/stop-slop-zh-tw`；未設定 `CODEX_HOME` 時，使用 `~/.codex/skills/stop-slop-zh-tw`。
+**Claude Projects：** 把 `SKILL.md` 與 references 上傳到專案知識。
 
 **API / 系統提示：** 把 `SKILL.md` 放進 system prompt，references 按需載入。
 
