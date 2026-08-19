@@ -7,7 +7,7 @@ test('辨識 Markdown、URL、HTML 與技術 token 保護區', () => {
   const input = [
     '[連結](https://example.com/a,b?x=1) 與 `const x = "a,b";`',
     '<a href="https://example.com">文字</a> user@example.com C:\\repo\\file.md',
-    '數量 1,264，版本 v1.2.3，日期 2026-07-16，時間 12:30。',
+    '數量 1,264，版本 1.2.3，日期 2026-07-16，時間 12:30。',
     '```js',
     'const message = "中文, English";',
     '```',
@@ -42,7 +42,7 @@ test('位置資訊使用一基準行號與欄位', () => {
 });
 
 test('用語掃描可選擇不保護數字 token', () => {
-  const input = '版本 v1.2.3';
+  const input = '版本 1.2.3';
   assert.equal(findProtectedRegions(input).some((region) => region.type === 'version-or-decimal'), true);
   assert.equal(findProtectedRegions(input, { protectNumeric: false }).some((region) => region.type === 'version-or-decimal'), false);
 });
@@ -52,4 +52,30 @@ test('保護 YAML frontmatter 與常見檔名 token', () => {
   const regions = findProtectedRegions(input);
   assert.equal(protectedRegionAt(regions, input.indexOf('description'))?.type, 'yaml-frontmatter');
   assert.equal(protectedRegionAt(regions, input.indexOf('original.md'))?.type, 'file-name');
+});
+
+test('dotted 技術識別字納入保護區', () => {
+  const identifiers = [
+    '.NET',
+    'net8.0',
+    'Testing.Platform',
+    'System.IO.Abstractions.TestingHelpers',
+    '.csproj',
+    '.gitignore',
+    '.claude',
+  ];
+  for (const identifier of identifiers) {
+    const input = `目標為 ${identifier} 請確認。`;
+    const regions = findProtectedRegions(input, { protectNumeric: false });
+    const region = protectedRegionAt(regions, input.indexOf(identifier));
+    assert.equal(region?.type, 'dotted-identifier', identifier);
+    assert.equal(input.slice(region.start, region.end), identifier, identifier);
+  }
+});
+
+test('中文句子中的點不被誤認為 dotted 識別字', () => {
+  for (const input of ['這是句子。下一句', '結束了.然後', '他說.我聽到了']) {
+    const regions = findProtectedRegions(input, { protectNumeric: false });
+    assert.equal(regions.some((region) => region.type === 'dotted-identifier'), false, input);
+  }
 });

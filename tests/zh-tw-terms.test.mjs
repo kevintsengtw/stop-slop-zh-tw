@@ -77,13 +77,13 @@ test('regex 策略回報實際命中的文字', () => {
       to: '版本號',
       mode: 'flag',
       match: 'regex',
-      pattern: 'v\\d+(?:\\.\\d+)+',
+      pattern: '\\d+(?:\\.\\d+)+',
     },
   ];
   assert.deepEqual(validateTerms(regexTerms), []);
-  const hits = scan('目前使用 v1.2.3。', regexTerms);
+  const hits = scan('目前使用 1.2.3。', regexTerms);
   assert.equal(hits.length, 1);
-  assert.equal(hits[0].matched, 'v1.2.3');
+  assert.equal(hits[0].matched, '1.2.3');
 });
 
 test('驗證器拒絕危險詞條', () => {
@@ -123,4 +123,40 @@ test('候選詞建置會跳過單字並替英數詞加上 word 邊界', () => {
   } finally {
     rmSync(temp, { recursive: true, force: true });
   }
+});
+
+test('前後文守衛讓詞條不切開更長的合法詞', () => {
+  const clean = [
+    'Analyzer 會分析複雜參數組合並產出報告。',
+    '建置失敗時 Executor 會回報錯誤並終止流程。',
+    'Source Generator 失敗時執行 dotnet clean 後重新建置。',
+    '可在終端機執行下列指令。',
+  ];
+  for (const line of clean) assert.deepEqual(scan(line, terms), [], line);
+
+  const flagged = [
+    ['測試資料使用數組儲存。', '數組'],
+    ['執行時 dotnet build 報錯找不到套件。', '報錯'],
+    ['支援新建測試與遷移兩種情境。', '新建'],
+    ['請開啟終端輸入指令。', '終端'],
+  ];
+  for (const [line, from] of flagged) {
+    const hits = scan(line, terms);
+    assert.equal(hits.length, 1, line);
+    assert.equal(hits[0].from, from);
+    assert.equal(hits[0].matched, from);
+  }
+});
+
+test('異常降為 flag，--fix 不再自動改寫「路徑異常」', () => {
+  const term = terms.find((item) => item.from === '異常');
+  assert.equal(term.mode, 'flag');
+  assert.equal(applyFix('偵測到路徑異常。', terms), '偵測到路徑異常。');
+});
+
+test('上下文已收錄，且為需人工判斷的 flag', () => {
+  const hits = scan('避免單一 AI 實例因上下文過長導致品質下降。', terms);
+  const hit = hits.find((item) => item.from === '上下文');
+  assert.equal(hit?.mode, 'flag');
+  assert.equal(hit.to, '脈絡、context');
 });
