@@ -217,12 +217,12 @@ New-Item -ItemType Junction `
 npm run validate
 ```
 
-這會執行 28 項 Node.js 測試、skill 結構檢查、209 筆正式詞條驗證及第二次長文端對端驗證。GitHub Actions 會在 Node.js 18、20、22 重複執行相同命令。
+這會執行 35 項 Node.js 測試、skill 結構檢查、210 筆正式詞條驗證及第二次長文端對端驗證。GitHub Actions 會在 Node.js 18、20、22 重複執行相同命令。
 
 詞條驗證器會拒絕重複 `from`、不合法的 mode、沒有邊界策略的英數詞、單字級中文字，以及含多個替代選項的 `auto` 詞條。
 正式詞條另須提供 `source`；來源 ID 與授權說明記錄在 [data/term-sources.json](data/term-sources.json)。
 
-排版工具會先保護 Markdown 程式碼、URL、連結目標、HTML 標籤、Email、路徑與數字型技術 token，再處理三項硬性規則：中文句子使用全形標點、英文句子保留半形標點、中英文之間使用一個半形空白。
+排版工具會先保護 Markdown 程式碼、URL、連結目標、HTML 標籤、Email、路徑、dotted 技術識別字（`.NET`、`net8.0`、`Testing.Platform`）與數字型技術 token，再處理三項硬性規則：中文句子使用全形標點、英文句子保留半形標點、中英文之間使用一個半形空白。
 
 ```bash
 node scripts/zh-tw-typography.mjs --check <檔案>

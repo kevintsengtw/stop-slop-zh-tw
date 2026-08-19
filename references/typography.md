@@ -31,6 +31,7 @@ Build failed, please retry.
 - URL、autolink 與 Markdown 連結目標
 - HTML 標籤及屬性
 - Email 與常見檔案路徑
+- dotted 技術識別字（`.NET`、`net8.0`、`Testing.Platform`、`System.IO.Abstractions`）
 - 千分位數字、版本號、小數、日期與時間
 
 Markdown 連結的顯示文字仍可檢查，只有目標需要保護：
