@@ -5,7 +5,7 @@
 
 移除正體中文（台灣）文章裡的 AI 味，並把中國用語校正成台灣慣用語。
 
-本專案以 [hardikpandya/stop-slop](https://github.com/hardikpandya/stop-slop) 的方法論為基礎，參考 [Humanizer-zh-TW](https://github.com/kevintsai1202/Humanizer-zh-TW) 的正體中文 AI 模式與人味概念，並結合 [taiwan.md](https://taiwan.md) 的用語對照資料。重點不是照抄或直譯，而是針對中文語料中的寫作模式重新實作，再加入台灣用語、保真流程與確定性排版工具。
+本專案以 [hardikpandya/stop-slop](https://github.com/hardikpandya/stop-slop) 的方法論為基礎，參考 [Humanizer-zh-TW](https://github.com/kevintsai1202/Humanizer-zh-TW) 的正體中文 AI 模式與人味概念，並結合 [taiwan.md](https://taiwan.md) 的用語對照資料。針對中文語料中的寫作模式重新實作，再加入台灣用語、保真流程與確定性排版工具，沒有照抄或直譯任何一份來源。
 
 ## 為什麼是「結合」而不是「翻譯」
 
@@ -13,7 +13,7 @@
 
 還有一層是**歐化語法／翻譯腔**——句法結構本身像翻譯，即使一個塑膠句都沒有。「透過…我們可以」「對於…來說」「使得」「…之一」「們」濫用，這些是中文 AI 最深的水印。一篇文章可以零塑膠卻整篇歐化。
 
-而且對台灣讀者來說，**很多 AI 味其實就是中國用語滲漏**（視頻、代碼、賦能）。所以「除 AI 味」「去翻譯腔」與「正台灣用語」這三層會互相強化——這正是把 stop-slop 與 taiwan-md 結合的意義。
+而且台灣讀者看到的 AI 味，**很多其實就是中國用語滲漏**（視頻、代碼、賦能）。所以「除 AI 味」「去翻譯腔」與「正台灣用語」這三層會互相強化——這正是把 stop-slop 與 taiwan-md 結合的意義。
 
 ## 結構
 
