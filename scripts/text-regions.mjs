@@ -147,6 +147,15 @@ export function findProtectedRegions(text, options = {}) {
     /\b(?:[A-Za-z0-9_-]+\.)+(?:md|markdown|txt|json|ya?ml|toml|ini|cfg|conf|m?js|cjs|ts|tsx|jsx|py|cs|fs|java|go|rs|rb|php|html?|css|scss|xml|sh|ps1|sql)\b/giu,
     'file-name',
   );
+  // dotted 技術識別字：.NET / net8.0 / Testing.Platform / System.IO.Abstractions
+  // 兩支交替：前導點單段（.NET、.csproj）與多段 dotted（net8.0、Testing.Platform）。
+  // 只寫多段那支會漏掉 .NET。用語掃描同樣需要，因此不受 protectNumeric 控制。
+  addRegexRegions(
+    text,
+    regions,
+    /(?<![\w.])(?:\.[A-Za-z][A-Za-z0-9_-]*(?:\.[A-Za-z0-9_-]+)*|[A-Za-z][A-Za-z0-9_-]*(?:\.[A-Za-z0-9_-]+)+)/gu,
+    'dotted-identifier',
+  );
 
   if (protectNumeric) {
     // 排版時保護數字型技術 token；用語掃描可停用，以保留自訂 regex 的辨識能力。

@@ -128,3 +128,22 @@ test('CLI 的 --check 發現問題時回傳非零且不寫入', () => {
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test('SNF：dotted 技術識別字不被改成全形句號', () => {
+  const input = [
+    '本專案支援 .NET 8 與 .NET 10，目標框架為 net8.0 / net9.0 / net10.0。',
+    'TUnit 0.6.123 與 Testing.Platform 的版本鏈鎖必須遵守。',
+    'System.IO.Abstractions.TestingHelpers 用於檔案系統測試。',
+    '設定檔為 .csproj，忽略清單為 .gitignore，設定放在 .claude 目錄。',
+  ].join('\n');
+  const result = formatTypography(input);
+  assert.deepEqual(result.issues, []);
+  assert.equal(result.output, input);
+});
+
+test('SF：中文句尾的半形句點仍會改成全形', () => {
+  const result = formatTypography('這句話結束了.下一句應該被改成全形句號。');
+  assert.equal(result.issues.length, 1);
+  assert.equal(result.issues[0].ruleId, 'zh-fullwidth-punctuation');
+  assert.equal(result.output, '這句話結束了。下一句應該被改成全形句號。');
+});
